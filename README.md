@@ -84,7 +84,7 @@ sentinel. `CMZModelStore.shared.delete(id:)` reclaims the disk.
 
 ## Status
 
-**v0.1 — 10 of 18 fully implemented**:
+**v0.1 — 11 of 18 fully implemented**:
 
 | Status | Type |
 |---|---|
@@ -98,13 +98,13 @@ sentinel. `CMZModelStore.shared.delete(id:)` reclaims the disk.
 | ✅ | `FaceEmbeddingRequest` (AdaFace) |
 | ✅ | `Face3DRequest` (3DDFA V2) + ROI cropping helper |
 | ✅ | `MusicTranscriptionRequest` (Basic Pitch) — window / unwrap / onset detection |
+| ✅ | `VisionLanguageSession` (Florence-2) — BART tokenizer + 3-stage seq2seq loop, caption / detailed caption / OCR / free-form Q&A |
 | 📋 | `SourceSeparationRequest` (HTDemucs) — needs 4096-pt STFT + overlap-add |
 | 📋 | `OpenVocabDetectionRequest` (YOLO-World) — needs CLIP BPE tokenizer port |
 | 📋 | `ZeroShotClassificationRequest` (SigLIP) — needs SentencePiece tokenizer |
 | 📋 | `VoiceConversionSession` (OpenVoice) — needs mel-spec extraction pipeline |
 | 📋 | `SpeechSynthesisSession` (Kokoro) — needs G2P + bucketed decoder routing |
 | 📋 | `TextToMusicSession` (Stable Audio) — needs T5 tokenizer + DiT denoising loop |
-| 📋 | `VisionLanguageSession` (Florence-2) — needs BART tokenizer + seq2seq loop |
 | 📋 | `VideoMattingSession` (MatAnyone) — needs 5-model ring-buffer state machine |
 
 Scaffolded types expose the intended public API surface (enums, structs) but
