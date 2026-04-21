@@ -28,9 +28,9 @@ import CoreGraphics
 public final class VisionLanguageSession: CMZSession {
 
     public enum Model: Sendable {
-        case florence2Base
+        case florence2
         var ids: [String] {
-            switch self { case .florence2Base: return ["florence2_base"] }
+            switch self { case .florence2: return ["florence2"] }
         }
         fileprivate var imageSize: Int { 768 }
     }
@@ -55,7 +55,7 @@ public final class VisionLanguageSession: CMZSession {
     private let decoderStartTokenId: Int32 = 2
     private let specialTokenIds: Set<Int32> = [0, 1, 2]
 
-    public init(model: Model = .florence2Base,
+    public init(model: Model = .florence2,
                 computeUnits: CMZComputeUnits = .auto) async throws {
         self.model = model
         let modelId = model.ids[0]

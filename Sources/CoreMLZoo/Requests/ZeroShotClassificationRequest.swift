@@ -18,7 +18,7 @@ import Accelerate
 public struct ZeroShotClassificationRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
-        case siglipBase = "siglip_base"
+        case siglipBase = "siglip"
 
         var inputSize: Int { 224 }
     }

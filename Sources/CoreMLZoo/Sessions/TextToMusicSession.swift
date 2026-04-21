@@ -13,20 +13,15 @@ import CoreML
 /// 6. Denoise loop: logit-SNR schedule, Euler step with DiT velocity
 /// 7. VAE decode → stereo waveform, trim to requested duration
 ///
-/// Use `.stableAudioOpenSmallFP32` on iPad Pro / Mac when FP16 DiT attention
-/// overflow causes audible artifacts in generated music.
+/// DiT inference uses FP16 by default; on iPad Pro / Mac, attention
+/// overflow can cause audible artifacts — override `computeUnits` with
+/// `.cpuOnly` as a mitigation.
 public final class TextToMusicSession: CMZSession {
 
     public enum Model: Sendable {
         case stableAudioOpenSmall
-        case stableAudioOpenSmallFP32
-        var id: String { "stable_audio_open_small" }
-        var ditSubstring: String {
-            switch self {
-            case .stableAudioOpenSmall:     return "DiT"
-            case .stableAudioOpenSmallFP32: return "DiT_FP32"
-            }
-        }
+        var id: String { "stable_audio" }
+        var ditSubstring: String { "DiT" }
     }
 
     public struct Result: Sendable {
@@ -59,12 +54,9 @@ public final class TextToMusicSession: CMZSession {
         let compute = (computeUnits == .auto) ? MLComputeUnits.all
                                               : computeUnits.mlComputeUnits
 
-        async let t5 = Self.load(modelId: modelId, substring: "T5", exclude: "FP32", compute: compute)
+        async let t5 = Self.load(modelId: modelId, substring: "T5Encoder", exclude: nil, compute: compute)
         async let ne = Self.load(modelId: modelId, substring: "NumberEmbedder", exclude: nil, compute: compute)
-        async let di = Self.load(modelId: modelId,
-                                  substring: model.ditSubstring,
-                                  exclude: model == .stableAudioOpenSmall ? "FP32" : nil,
-                                  compute: compute)
+        async let di = Self.load(modelId: modelId, substring: "DiT", exclude: nil, compute: compute)
         async let va = Self.load(modelId: modelId, substring: "VAEDecoder", exclude: nil, compute: compute)
         self.t5Encoder = try await t5
         self.numberEmbedder = try await ne

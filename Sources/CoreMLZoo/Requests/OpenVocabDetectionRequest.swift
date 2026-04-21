@@ -25,7 +25,7 @@ public struct DetectedObject: Sendable {
 public struct OpenVocabDetectionRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
-        case yoloWorldV2S = "yoloworld_v2s"
+        case yoloWorldV2S = "yoloworld"
 
         var inputSize: Int { 640 }
         var maxClasses: Int { 80 }

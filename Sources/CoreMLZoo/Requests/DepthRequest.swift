@@ -27,21 +27,11 @@ public struct DepthRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
         case moGe2 = "moge2_vitb_normal_504"
-        case depthAnythingV3Small = "depth_anything_v3_small"
-        case midasSmall = "midas_small"
+        case depthAnythingV3Small = "depth_anything_v3_small_504"
+        case depthAnythingV3Base = "depth_anything_v3_base_504"
 
-        var inputSize: Int {
-            switch self {
-            case .moGe2, .depthAnythingV3Small: return 504
-            case .midasSmall: return 256
-            }
-        }
-
-        var computeUnits: CMZComputeUnits {
-            // ViT at 504 fits comfortably on ANE; MiDaS small is MobileNet-ish.
-            .all
-        }
-
+        var inputSize: Int { 504 }
+        var computeUnits: CMZComputeUnits { .all }
         var hasNormal: Bool { self == .moGe2 }
         var hasMask: Bool { self == .moGe2 }
         var isMetric: Bool { self == .moGe2 }
@@ -78,12 +68,7 @@ public struct DepthRequest: CMZRequest {
                                model: Model,
                                size: Int) throws -> DepthResult {
         // Per-model feature names. When we add new depth models, extend here.
-        let depthKey: String
-        switch model {
-        case .moGe2:                 depthKey = "depth"
-        case .depthAnythingV3Small:  depthKey = "depth"
-        case .midasSmall:            depthKey = "relative_depth"
-        }
+        let depthKey = "depth"
         guard let depthArr = output.featureValue(for: depthKey)?.multiArrayValue else {
             throw CMZError.inferenceFailed(reason: "'\(depthKey)' feature missing")
         }

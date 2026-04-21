@@ -2,8 +2,6 @@ import Foundation
 import CoreML
 import CoreGraphics
 
-// MARK: - Colorization (fully implemented)
-
 /// Grayscale → color image. Default: DDColor Tiny (Lab→ab residual, 512×512
 /// input). Output resolution matches input.
 ///
@@ -12,7 +10,7 @@ import CoreGraphics
 public struct ColorizeRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
-        case ddColorTiny = "ddcolor_tiny"
+        case ddColor = "ddcolor"
 
         var inputSize: Int { 512 }
     }
@@ -20,7 +18,7 @@ public struct ColorizeRequest: CMZRequest {
     public let model: Model
     public var computeUnits: CMZComputeUnits
 
-    public init(model: Model = .ddColorTiny, computeUnits: CMZComputeUnits = .auto) {
+    public init(model: Model = .ddColor, computeUnits: CMZComputeUnits = .auto) {
         self.model = model; self.computeUnits = computeUnits
     }
 
@@ -50,17 +48,15 @@ public struct ColorizeRequest: CMZRequest {
         let plane = size * size
         let grayCHW = try MLMultiArray(shape: [1, 3, size, size] as [NSNumber],
                                        dataType: .float32)
-        grayCHW.withUnsafeMutableBytes { ptr, _ in
-            let fp = ptr.baseAddress!.assumingMemoryBound(to: Float.self)
-            DispatchQueue.concurrentPerform(iterations: plane) { i in
-                let (l, _, _) = LabColor.srgbToLab(r: smallRGB[i * 3],
-                                                    g: smallRGB[i * 3 + 1],
-                                                    b: smallRGB[i * 3 + 2])
-                let (gr, gg, gb) = LabColor.labToSrgb(l: l, a: 0, b: 0)
-                fp[0 * plane + i] = gr
-                fp[1 * plane + i] = gg
-                fp[2 * plane + i] = gb
-            }
+        let fp = grayCHW.dataPointer.assumingMemoryBound(to: Float.self)
+        DispatchQueue.concurrentPerform(iterations: plane) { i in
+            let (l, _, _) = LabColor.srgbToLab(r: smallRGB[i * 3],
+                                                g: smallRGB[i * 3 + 1],
+                                                b: smallRGB[i * 3 + 2])
+            let (gr, gg, gb) = LabColor.labToSrgb(l: l, a: 0, b: 0)
+            fp[0 * plane + i] = gr
+            fp[1 * plane + i] = gg
+            fp[2 * plane + i] = gb
         }
 
         // 3. Run inference
@@ -80,10 +76,8 @@ public struct ColorizeRequest: CMZRequest {
 
         // 4. Pull AB (2×H×W) into planar floats
         var ab512 = [Float](repeating: 0, count: ab.count)
-        ab.withUnsafeBytes { ptr, _ in
-            let fp = ptr.baseAddress!.assumingMemoryBound(to: Float.self)
-            for i in 0..<ab.count { ab512[i] = fp[i] }
-        }
+        let abPtr = ab.dataPointer.assumingMemoryBound(to: Float.self)
+        for i in 0..<ab.count { ab512[i] = abPtr[i] }
 
         // 5. Upscale AB to original resolution
         let abFull = ImagePixels.resize2ChannelPlanar(ab512,
@@ -105,91 +99,5 @@ public struct ColorizeRequest: CMZRequest {
             throw CMZError.inferenceFailed(reason: "failed to assemble output image")
         }
         return out
-    }
-}
-
-// MARK: - Low-light enhancement
-
-/// Low-light image enhancement. Models share an image-in / image-out shape
-/// but differ in input size and normalization. Retinexformer variants expect
-/// 512×512 RGB in [0, 1], Zero-DCE expects any size (fully convolutional),
-/// StableLLVE expects 400×600.
-public struct LowLightEnhanceRequest: CMZRequest {
-
-    public enum Model: String, Sendable, CaseIterable {
-        case retinexformerFiveK = "retinexformer_fivek"
-        case retinexformerNTIRE = "retinexformer_ntire"
-        case stableLLVE = "stablellve"
-        case zeroDCE = "zero_dce"
-
-        var inputSize: CGSize {
-            switch self {
-            case .retinexformerFiveK, .retinexformerNTIRE: return CGSize(width: 512, height: 512)
-            case .stableLLVE: return CGSize(width: 600, height: 400)
-            case .zeroDCE: return CGSize(width: 512, height: 512)
-            }
-        }
-    }
-
-    public let model: Model
-    public var computeUnits: CMZComputeUnits
-
-    public init(model: Model = .retinexformerFiveK, computeUnits: CMZComputeUnits = .auto) {
-        self.model = model; self.computeUnits = computeUnits
-    }
-
-    public var modelId: String { model.rawValue }
-
-    public func perform(on input: CGImage) async throws -> CGImage {
-        try await SimpleImage2Image.run(modelId: modelId,
-                                        input: input,
-                                        inputSize: model.inputSize,
-                                        computeUnits: computeUnits)
-    }
-}
-
-// MARK: - Image restoration
-
-/// Image restoration (deblur / denoise / derain / contrast / super-resolution
-/// variants via MPRNet or MIRNetv2). All ship a single mlpackage with a fixed
-/// input resolution; the caller supplies an image of that size.
-public struct ImageRestorationRequest: CMZRequest {
-
-    public enum Model: String, Sendable, CaseIterable {
-        case mprnetDeblurring = "mprnet_deblurring"
-        case mprnetDenoising = "mprnet_denoising"
-        case mprnetDeraining = "mprnet_deraining"
-        case mirnetv2Denoising = "mirnetv2_denoising"
-        case mirnetv2ContrastEnhancement = "mirnetv2_contrast_enhancement"
-        case mirnetv2SuperResolution = "mirnetv2_super_resolution"
-        case mirnetv2LowLight = "mirnetv2_low_light_enhancement"
-
-        var inputSize: CGSize {
-            switch self {
-            case .mprnetDeblurring:  return CGSize(width: 256, height: 256)
-            case .mprnetDenoising:   return CGSize(width: 256, height: 256)
-            case .mprnetDeraining:   return CGSize(width: 256, height: 256)
-            case .mirnetv2Denoising,
-                 .mirnetv2ContrastEnhancement,
-                 .mirnetv2SuperResolution,
-                 .mirnetv2LowLight:  return CGSize(width: 256, height: 256)
-            }
-        }
-    }
-
-    public let model: Model
-    public var computeUnits: CMZComputeUnits
-
-    public init(model: Model, computeUnits: CMZComputeUnits = .auto) {
-        self.model = model; self.computeUnits = computeUnits
-    }
-
-    public var modelId: String { model.rawValue }
-
-    public func perform(on input: CGImage) async throws -> CGImage {
-        try await SimpleImage2Image.run(modelId: modelId,
-                                        input: input,
-                                        inputSize: model.inputSize,
-                                        computeUnits: computeUnits)
     }
 }

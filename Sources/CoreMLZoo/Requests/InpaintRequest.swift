@@ -15,14 +15,8 @@ public struct InpaintRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
         case lama = "lama"
-        case aotGan = "aot_gan_inpainting"
 
-        var inputSize: CGSize {
-            switch self {
-            case .lama:    return CGSize(width: 512, height: 512)
-            case .aotGan:  return CGSize(width: 512, height: 512)
-            }
-        }
+        var inputSize: CGSize { CGSize(width: 512, height: 512) }
     }
 
     public struct Input: Sendable {

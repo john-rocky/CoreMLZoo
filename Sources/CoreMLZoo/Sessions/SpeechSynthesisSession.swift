@@ -63,6 +63,11 @@ public final class SpeechSynthesisSession: CMZSession {
     // MARK: - Public API
 
     /// Synthesize `text` as 24 kHz float mono PCM using `voice`.
+    ///
+    /// > Warning: the built-in text → phoneme step is minimal (it just
+    /// > lowercases the input). English output will be poor unless you
+    /// > pre-phonemize with an external G2P (espeak / piper-phonemize)
+    /// > and use `synthesizePhonemes(_:voice:)` instead.
     public func synthesize(_ text: String, voice: Voice = .afHeart) async throws -> [Float] {
         try await synthesizePhonemes(text.lowercased(), voice: voice)
     }

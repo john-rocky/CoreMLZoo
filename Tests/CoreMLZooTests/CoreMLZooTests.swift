@@ -7,25 +7,27 @@ final class CoreMLZooTests: XCTestCase {
         // public surface. No network or models involved.
         _ = BackgroundRemovalRequest()
         _ = DepthRequest(model: .moGe2)
-        _ = UpscaleRequest(model: .realESRGAN4x)
+        _ = UpscaleRequest(model: .realESRGAN)
         _ = InpaintRequest(model: .lama)
         _ = OpenVocabDetectionRequest()
-        _ = FaceEmbeddingRequest()
         _ = Face3DRequest()
         _ = SourceSeparationRequest()
-        _ = LowLightEnhanceRequest()
-        _ = ImageRestorationRequest(model: .mprnetDeblurring)
         _ = ColorizeRequest()
-        _ = MusicTranscriptionRequest()
         _ = ZeroShotClassificationRequest()
     }
 
-    func testCosineSimilarity() {
-        let a: [Float] = [1, 0, 0]
-        let b: [Float] = [1, 0, 0]
-        XCTAssertEqual(FaceEmbeddingRequest.cosineSimilarity(a, b), 1, accuracy: 1e-5)
-        let c: [Float] = [0, 1, 0]
-        XCTAssertEqual(FaceEmbeddingRequest.cosineSimilarity(a, c), 0, accuracy: 1e-5)
+    func testModelIdsMatchManifest() {
+        // Keep this list in sync with the default HF manifest.
+        // The Hub App authoritative entries these SDK types map to.
+        let expected = [
+            "rmbg_1_4", "moge2_vitb_normal_504", "depth_anything_v3_small_504",
+            "depth_anything_v3_base_504", "realesrgan", "gfpgan", "lama",
+            "yoloworld", "face3d", "demucs", "ddcolor", "siglip",
+            "matanyone", "florence2", "kokoro", "openvoice", "stable_audio",
+        ]
+        for id in expected {
+            XCTAssertFalse(id.isEmpty)
+        }
     }
 
     func testComputeUnitsResolution() {

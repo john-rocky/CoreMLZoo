@@ -14,7 +14,7 @@ import Accelerate
 public struct Face3DRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
-        case ddfaV2 = "face3d_3ddfa_v2"
+        case ddfaV2 = "face3d"
 
         var inputSize: Int { 120 }
     }

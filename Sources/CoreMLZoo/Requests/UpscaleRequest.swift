@@ -16,16 +16,9 @@ import CoreGraphics
 public struct UpscaleRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
-        case realESRGAN4x = "real_esrgan_4x"
-        case realESRGANAnime4x = "real_esrgan_anime_4x"
-        case esrgan = "esrgan"
-        case ultraSharp = "ultrasharp"
-        case bsrgan = "bsrgan"
-        case aesrgan = "a_esrgan"
-        /// SinSR is 3 mlpackages (encoder + denoiser + decoder). Use the
-        /// dedicated `SinSRPipeline` (see README); this enum case is
-        /// reserved for future convenience.
-        case sinSR = "sinsr_denoiser"
+        case realESRGAN = "realesrgan"
+        /// Face-aware super-resolution (v1 face portraits primarily).
+        case gfpgan = "gfpgan"
 
         var scaleFactor: Int { 4 }
     }
@@ -33,7 +26,7 @@ public struct UpscaleRequest: CMZRequest {
     public let model: Model
     public var computeUnits: CMZComputeUnits
 
-    public init(model: Model = .realESRGAN4x, computeUnits: CMZComputeUnits = .auto) {
+    public init(model: Model = .realESRGAN, computeUnits: CMZComputeUnits = .auto) {
         self.model = model
         self.computeUnits = computeUnits
     }
@@ -41,9 +34,6 @@ public struct UpscaleRequest: CMZRequest {
     public var modelId: String { model.rawValue }
 
     public func perform(on input: CGImage) async throws -> CGImage {
-        if model == .sinSR {
-            throw CMZError.inferenceFailed(reason: "SinSR requires the 3-model pipeline; use SinSRPipeline")
-        }
         let inputSize = try await Self.inputSize(modelId: modelId)
         return try await SimpleImage2Image.run(modelId: modelId,
                                                 input: input,

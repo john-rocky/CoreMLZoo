@@ -86,13 +86,10 @@ enum ImagePixels {
                         width: Int,
                         height: Int) {
         let plane = width * height
-        array.withUnsafeMutableBytes { ptr, _ in
-            guard let base = ptr.baseAddress else { return }
-            let fp = base.assumingMemoryBound(to: Float.self)
-            for i in 0..<plane {
-                for c in 0..<channels {
-                    fp[c * plane + i] = rgb[i * channels + c]
-                }
+        let fp = array.dataPointer.assumingMemoryBound(to: Float.self)
+        for i in 0..<plane {
+            for c in 0..<channels {
+                fp[c * plane + i] = rgb[i * channels + c]
             }
         }
     }

@@ -12,7 +12,7 @@ import Accelerate
 public struct SourceSeparationRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
-        case htDemucs = "htdemucs_source_separation_fp32"
+        case htDemucs = "demucs"
 
         var sampleRate: Int { 44100 }
         var channels: Int { 2 }
