@@ -296,7 +296,7 @@ public final class VisionLanguageSession: CMZSession {
         let cfg = MLModelConfiguration()
         cfg.computeUnits = compute
         do {
-            return try await MLModel.load(contentsOf: url, configuration: cfg)
+            return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
         } catch {
             throw CMZError.inferenceFailed(reason: "load \(url.lastPathComponent): \(error)")
         }

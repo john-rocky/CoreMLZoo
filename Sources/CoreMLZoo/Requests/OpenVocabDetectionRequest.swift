@@ -245,7 +245,7 @@ public struct OpenVocabDetectionRequest: CMZRequest {
         }
         let cfg = MLModelConfiguration()
         cfg.computeUnits = compute
-        return try await MLModel.load(contentsOf: url, configuration: cfg)
+        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
     }
 
     private static func loadTokenizer(modelId: String) throws -> CLIPTokenizer {

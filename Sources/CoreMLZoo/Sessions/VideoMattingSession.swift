@@ -425,7 +425,7 @@ public final class VideoMattingSession: CMZSession {
         }
         let cfg = MLModelConfiguration()
         cfg.computeUnits = units
-        return try await MLModel.load(contentsOf: url, configuration: cfg)
+        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
     }
 
     // MARK: - Low-level utilities

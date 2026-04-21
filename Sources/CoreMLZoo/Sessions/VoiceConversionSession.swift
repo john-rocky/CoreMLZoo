@@ -165,7 +165,7 @@ public final class VoiceConversionSession: CMZSession {
         }
         let cfg = MLModelConfiguration()
         cfg.computeUnits = compute
-        return try await MLModel.load(contentsOf: url, configuration: cfg)
+        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
     }
 
     private static func readFloats(_ array: MLMultiArray) -> [Float] {
