@@ -104,12 +104,9 @@ sentinel. `CMZModelStore.shared.delete(id:)` reclaims the disk.
    whisper-phonemize) and call `synthesizePhonemes(_:voice:)` directly.
    Japanese and other languages with phonemic orthography work better out
    of the box.
-2. **`VisionLanguageSession.groundPhrase(_:in:)` is not wired** —
-   Florence-2's bounding-box string parsing is TODO. Other tasks
-   (`caption`, `ocr`, `ask`) work.
-3. **`VideoMattingSession` is locked to 768×432 landscape.** Portrait
+2. **`VideoMattingSession` is locked to 768×432 landscape.** Portrait
    sources must be rotated by the caller before `process(_:)`.
-4. **`UpscaleRequest` reads the compiled mlpackage's fixed input size**
+3. **`UpscaleRequest` reads the compiled mlpackage's fixed input size**
    — callers must pre-resize/crop to the tile size the converter used
    (typically 256×256 or 512×512).
 

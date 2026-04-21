@@ -102,12 +102,61 @@ public final class VisionLanguageSession: CMZSession {
         return try await infer(image: image, promptTokens: tokens, maxTokens: maxTokens)
     }
 
-    /// Phrase grounding is not yet wired (requires the `<OPEN_VOCABULARY_DETECTION>`
-    /// task token set + bounding-box token parsing from the decoded string).
-    /// Kept on the API surface for consumers to depend on.
-    public func groundPhrase(_ phrase: String, in image: CGImage) async throws -> [CGRect] {
-        throw CMZError.inferenceFailed(
-            reason: "phrase grounding not yet implemented (Florence-2 decoder string parsing)")
+    /// Phrase grounding. Returns normalized bounding boxes (origin top-left,
+    /// [0, 1]^4, Vision convention) for every region in `image` that matches
+    /// `phrase`.
+    ///
+    /// Florence-2 encodes grounding output as `<phrase><loc_X1><loc_Y1><loc_X2><loc_Y2>`
+    /// with each `loc_N` being a quantized coordinate in `0..<1000`. This
+    /// method parses those markers out of the decoded string and returns
+    /// the normalized rects.
+    public func groundPhrase(_ phrase: String,
+                             in image: CGImage,
+                             maxTokens: Int = 256) async throws -> [CGRect] {
+        let prompt = "Locate the phrases in the caption: \(phrase)"
+        let tokens = tokenize(prompt)
+        let raw = try await infer(image: image,
+                                   promptTokens: tokens,
+                                   maxTokens: maxTokens)
+        return Self.parseLocationBoxes(from: raw)
+    }
+
+    /// Parse `<loc_X>` markers out of a Florence-2 decoded string into
+    /// normalized `[0, 1]^4` rects. Markers come in groups of 4 ordered
+    /// (x1, y1, x2, y2); we clamp, reject degenerate rects, and return
+    /// Vision-convention rects (origin top-left).
+    static func parseLocationBoxes(from raw: String) -> [CGRect] {
+        // Extract every integer N appearing inside `<loc_N>`.
+        let pattern = "<loc_(\\d+)>"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let ns = raw as NSString
+        let matches = regex.matches(in: raw, range: NSRange(location: 0, length: ns.length))
+        var coords: [Int] = []
+        coords.reserveCapacity(matches.count)
+        for m in matches where m.numberOfRanges >= 2 {
+            let digits = ns.substring(with: m.range(at: 1))
+            if let v = Int(digits) { coords.append(v) }
+        }
+
+        var rects: [CGRect] = []
+        let groups = coords.count / 4
+        let scale: CGFloat = 1.0 / 999.0
+        for g in 0..<groups {
+            let base = g * 4
+            var x1 = CGFloat(coords[base    ]) * scale
+            var y1 = CGFloat(coords[base + 1]) * scale
+            var x2 = CGFloat(coords[base + 2]) * scale
+            var y2 = CGFloat(coords[base + 3]) * scale
+            if x2 < x1 { swap(&x1, &x2) }
+            if y2 < y1 { swap(&y1, &y2) }
+            x1 = max(0, min(1, x1)); y1 = max(0, min(1, y1))
+            x2 = max(0, min(1, x2)); y2 = max(0, min(1, y2))
+            let w = x2 - x1, h = y2 - y1
+            if w > 0 && h > 0 {
+                rects.append(CGRect(x: x1, y: y1, width: w, height: h))
+            }
+        }
+        return rects
     }
 
     // MARK: - Pipeline
