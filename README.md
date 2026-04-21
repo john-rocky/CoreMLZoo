@@ -84,13 +84,36 @@ sentinel. `CMZModelStore.shared.delete(id:)` reclaims the disk.
 
 ## Status
 
-**v1-alpha**: fully implemented — `BackgroundRemovalRequest`, `DepthRequest`.
-Remaining 16 types have the public API surface declared but inference logic
-is stubbed (`throw CMZError.inferenceFailed("… scaffolded in v1-alpha")`);
-pre/post-processing will be ported from each sample app in
-`CoreML-Models/sample_apps/<Name>Demo` as the releases are cut.
+**v0.1 — 10 of 18 fully implemented**:
 
-Track progress per Request in GitHub issues tagged `v1`.
+| Status | Type |
+|---|---|
+| ✅ | `BackgroundRemovalRequest` (RMBG-1.4) |
+| ✅ | `DepthRequest` (MoGe-2 / DA3 / MiDaS) |
+| ✅ | `ColorizeRequest` (DDColor) — LAB-space composition, concurrent per-row |
+| ✅ | `UpscaleRequest` (Real-ESRGAN, ESRGAN, UltraSharp, BSRGAN, A-ESRGAN) |
+| ✅ | `LowLightEnhanceRequest` (Retinexformer, StableLLVE, Zero-DCE) |
+| ✅ | `ImageRestorationRequest` (MPRNet, MIRNetv2 variants) |
+| ✅ | `InpaintRequest` (LaMa, AOT-GAN) |
+| ✅ | `FaceEmbeddingRequest` (AdaFace) |
+| ✅ | `Face3DRequest` (3DDFA V2) + ROI cropping helper |
+| ✅ | `MusicTranscriptionRequest` (Basic Pitch) — window / unwrap / onset detection |
+| 📋 | `SourceSeparationRequest` (HTDemucs) — needs 4096-pt STFT + overlap-add |
+| 📋 | `OpenVocabDetectionRequest` (YOLO-World) — needs CLIP BPE tokenizer port |
+| 📋 | `ZeroShotClassificationRequest` (SigLIP) — needs SentencePiece tokenizer |
+| 📋 | `VoiceConversionSession` (OpenVoice) — needs mel-spec extraction pipeline |
+| 📋 | `SpeechSynthesisSession` (Kokoro) — needs G2P + bucketed decoder routing |
+| 📋 | `TextToMusicSession` (Stable Audio) — needs T5 tokenizer + DiT denoising loop |
+| 📋 | `VisionLanguageSession` (Florence-2) — needs BART tokenizer + seq2seq loop |
+| 📋 | `VideoMattingSession` (MatAnyone) — needs 5-model ring-buffer state machine |
+
+Scaffolded types expose the intended public API surface (enums, structs) but
+`perform` throws `CMZError.inferenceFailed("… scaffolded")`. Reference
+implementations live in `CoreML-Models/sample_apps/<Name>Demo/` — porting
+each is straightforward plumbing, the hard work (tokenizers, schedulers, DSP)
+is the remaining blocker.
+
+Track per-type progress in GitHub issues tagged `v1`.
 
 ## License
 

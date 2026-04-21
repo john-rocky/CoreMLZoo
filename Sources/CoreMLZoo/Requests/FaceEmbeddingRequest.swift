@@ -1,20 +1,23 @@
 import Foundation
+import CoreML
 import CoreGraphics
+import Accelerate
 
-/// 512-dim face identity embedding. Use cosine distance to compare two
-/// embeddings (same identity ≥ ~0.4).
+/// 512-dim face identity embedding. Use `cosineSimilarity` to compare two
+/// embeddings; ≥ ~0.4 is the same identity for AdaFace at default settings.
 ///
-/// Unlike `Vision.VNFaceObservation` which returns only landmarks/quality,
-/// this is an actual identity embedding suitable for verification / clustering.
-/// Default model: AdaFace IR-18 (48 MB).
+/// Unlike `Vision.VNFaceObservation` which returns landmarks/quality only,
+/// this is an actual identity embedding suitable for verification /
+/// clustering. Default model: AdaFace IR-18 (48 MB).
 ///
-/// - Note: v1-alpha scaffolding. Ports from `sample_apps/AdaFaceDemo`.
+/// `perform` expects a pre-aligned 112×112 face crop. Do detection +
+/// 5-point alignment upstream (Vision's `VNDetectFaceLandmarksRequest` is
+/// fine for the detection half).
 public struct FaceEmbeddingRequest: CMZRequest {
 
     public enum Model: String, Sendable, CaseIterable {
         case adaFaceIR18 = "adaface_ir18"
 
-        /// Expected input size for the face crop (112×112 RGB, aligned).
         var inputSize: Int { 112 }
     }
 
@@ -27,11 +30,52 @@ public struct FaceEmbeddingRequest: CMZRequest {
 
     public var modelId: String { model.rawValue }
 
-    /// `input` is a pre-aligned face crop (caller is responsible for face
-    /// detection + 5-point alignment, typically via Vision's
-    /// `VNDetectFaceLandmarksRequest`).
     public func perform(on input: CGImage) async throws -> [Float] {
-        throw CMZError.inferenceFailed(reason: "FaceEmbeddingRequest is scaffolded in v1-alpha")
+        let size = model.inputSize
+        let buffer = try ImageBuffer.bgraBuffer(from: input,
+                                                 size: CGSize(width: size, height: size))
+
+        let compute = (computeUnits == .auto) ? MLComputeUnits.all
+                                              : computeUnits.mlComputeUnits
+        let coreModel = try await ModelLoading.load(modelId: modelId, compute: compute)
+
+        let inputKey = coreModel.modelDescription.inputDescriptionsByName.keys.first ?? "image"
+        let provider = try MLDictionaryFeatureProvider(
+            dictionary: [inputKey: MLFeatureValue(pixelBuffer: buffer)])
+        let output: MLFeatureProvider
+        do {
+            output = try await coreModel.prediction(from: provider)
+        } catch {
+            throw CMZError.inferenceFailed(reason: "\(error)")
+        }
+
+        for (name, desc) in coreModel.modelDescription.outputDescriptionsByName
+            where desc.type == .multiArray {
+            if let arr = output.featureValue(for: name)?.multiArrayValue {
+                return extractFloats(arr)
+            }
+        }
+        throw CMZError.inferenceFailed(reason: "no embedding output")
+    }
+
+    private func extractFloats(_ array: MLMultiArray) -> [Float] {
+        let n = array.count
+        var result = [Float](repeating: 0, count: n)
+        if array.dataType == .float16 {
+            let src = array.dataPointer.assumingMemoryBound(to: UInt16.self)
+            result.withUnsafeMutableBufferPointer { dst in
+                var s = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: src),
+                                      height: 1, width: vImagePixelCount(n),
+                                      rowBytes: n * 2)
+                var d = vImage_Buffer(data: dst.baseAddress!,
+                                      height: 1, width: vImagePixelCount(n),
+                                      rowBytes: n * 4)
+                vImageConvert_Planar16FtoPlanarF(&s, &d, 0)
+            }
+        } else {
+            memcpy(&result, array.dataPointer, n * 4)
+        }
+        return result
     }
 
     public static func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
