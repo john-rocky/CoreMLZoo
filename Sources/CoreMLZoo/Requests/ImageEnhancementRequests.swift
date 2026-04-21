@@ -31,15 +31,11 @@ public struct ColorizeRequest: CMZRequest {
         // 1. Extract L channel at full resolution (kept as-is)
         let (rgb, _, _) = ImagePixels.rgbFloats(from: input)
         var origL = [Float](repeating: 0, count: origW * origH)
-        DispatchQueue.concurrentPerform(iterations: origH) { y in
-            let row = y * origW
-            for x in 0..<origW {
-                let i = row + x
-                let (l, _, _) = LabColor.srgbToLab(r: rgb[i * 3],
-                                                    g: rgb[i * 3 + 1],
-                                                    b: rgb[i * 3 + 2])
-                origL[i] = l
-            }
+        for i in 0..<(origW * origH) {
+            let (l, _, _) = LabColor.srgbToLab(r: rgb[i * 3],
+                                                g: rgb[i * 3 + 1],
+                                                b: rgb[i * 3 + 2])
+            origL[i] = l
         }
 
         // 2. Resize to 512x512 and turn it into gray-RGB (L, 0, 0 → sRGB)
@@ -49,7 +45,7 @@ public struct ColorizeRequest: CMZRequest {
         let grayCHW = try MLMultiArray(shape: [1, 3, size, size] as [NSNumber],
                                        dataType: .float32)
         let fp = grayCHW.dataPointer.assumingMemoryBound(to: Float.self)
-        DispatchQueue.concurrentPerform(iterations: plane) { i in
+        for i in 0..<plane {
             let (l, _, _) = LabColor.srgbToLab(r: smallRGB[i * 3],
                                                 g: smallRGB[i * 3 + 1],
                                                 b: smallRGB[i * 3 + 2])
@@ -87,7 +83,7 @@ public struct ColorizeRequest: CMZRequest {
         // 6. Merge L + AB → sRGB
         let pixelCount = origW * origH
         var rgba = [UInt8](repeating: 255, count: pixelCount * 4)
-        DispatchQueue.concurrentPerform(iterations: pixelCount) { i in
+        for i in 0..<pixelCount {
             let (r, g, b) = LabColor.labToSrgb(l: origL[i],
                                                 a: abFull[i],
                                                 b: abFull[pixelCount + i])
