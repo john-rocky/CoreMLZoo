@@ -281,25 +281,11 @@ public final class VisionLanguageSession: CMZSession {
 
     private static func loadNamed(modelId: String, containing needle: String,
                                    compute: MLComputeUnits) async throws -> MLModel {
-        let dir = CMZPaths.modelDir(id: modelId)
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: CMZPaths.metaFile(modelId: modelId).path) else {
-            throw CMZError.modelNotInstalled(id: modelId)
-        }
-        let entries = (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
-        guard let url = entries.first(where: {
-            ($0.pathExtension == "mlpackage" || $0.pathExtension == "mlmodelc")
-                && $0.lastPathComponent.contains(needle)
-        }) else {
-            throw CMZError.inferenceFailed(reason: "Florence-2 sub-model '\(needle)' missing")
-        }
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = compute
-        do {
-            return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
-        } catch {
-            throw CMZError.inferenceFailed(reason: "load \(url.lastPathComponent): \(error)")
-        }
+        try await ModelLoading.loadSubmodel(modelId: modelId,
+                                             containing: needle,
+                                             caseInsensitive: false,
+                                             compute: compute,
+                                             missingLabel: "Florence-2 sub-model")
     }
 
     private static func loadVocab(modelId: String) throws -> ([Int: String], [String: Int]) {

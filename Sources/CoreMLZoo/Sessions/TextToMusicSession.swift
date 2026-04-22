@@ -248,24 +248,12 @@ public final class TextToMusicSession: CMZSession {
     private static func load(modelId: String, substring: String,
                               exclude: String?,
                               compute: MLComputeUnits) async throws -> MLModel {
-        let dir = CMZPaths.modelDir(id: modelId)
-        guard FileManager.default.fileExists(atPath: CMZPaths.metaFile(modelId: modelId).path) else {
-            throw CMZError.modelNotInstalled(id: modelId)
-        }
-        let entries = (try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: nil)) ?? []
-        guard let url = entries.first(where: { url in
-            guard url.pathExtension == "mlpackage" || url.pathExtension == "mlmodelc" else { return false }
-            let name = url.lastPathComponent
-            if !name.contains(substring) { return false }
-            if let excl = exclude, name.contains(excl) { return false }
-            return true
-        }) else {
-            throw CMZError.inferenceFailed(reason: "Stable Audio '\(substring)' missing")
-        }
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = compute
-        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
+        try await ModelLoading.loadSubmodel(modelId: modelId,
+                                             containing: substring,
+                                             excluding: exclude,
+                                             caseInsensitive: false,
+                                             compute: compute,
+                                             missingLabel: "Stable Audio")
     }
 
     private static func loadVocab(modelId: String) throws -> [String: Int32] {

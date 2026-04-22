@@ -406,26 +406,11 @@ public final class VideoMattingSession: CMZSession {
                                     substring: String,
                                     exclude: String?,
                                     units: MLComputeUnits) async throws -> MLModel {
-        let dir = CMZPaths.modelDir(id: modelId)
-        guard FileManager.default.fileExists(atPath: CMZPaths.metaFile(modelId: modelId).path) else {
-            throw CMZError.modelNotInstalled(id: modelId)
-        }
-        let entries = (try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: nil)) ?? []
-        let lowerSub = substring.lowercased()
-        let candidates = entries.filter {
-            guard $0.pathExtension == "mlpackage" || $0.pathExtension == "mlmodelc" else { return false }
-            let lower = $0.lastPathComponent.lowercased()
-            if !lower.contains(lowerSub) { return false }
-            if let excl = exclude, lower.contains(excl.lowercased()) { return false }
-            return true
-        }
-        guard let url = candidates.first else {
-            throw CMZError.inferenceFailed(reason: "MatAnyone sub-model '\(substring)' missing")
-        }
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = units
-        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
+        try await ModelLoading.loadSubmodel(modelId: modelId,
+                                             containing: substring,
+                                             excluding: exclude,
+                                             compute: units,
+                                             missingLabel: "MatAnyone sub-model")
     }
 
     // MARK: - Low-level utilities

@@ -136,21 +136,10 @@ public struct ZeroShotClassificationRequest: CMZRequest {
 
     private static func load(modelId: String, containing needle: String,
                               compute: MLComputeUnits) async throws -> MLModel {
-        let dir = CMZPaths.modelDir(id: modelId)
-        guard FileManager.default.fileExists(atPath: CMZPaths.metaFile(modelId: modelId).path) else {
-            throw CMZError.modelNotInstalled(id: modelId)
-        }
-        let entries = (try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: nil)) ?? []
-        guard let url = entries.first(where: {
-            ($0.pathExtension == "mlpackage" || $0.pathExtension == "mlmodelc")
-                && $0.lastPathComponent.lowercased().contains(needle)
-        }) else {
-            throw CMZError.inferenceFailed(reason: "sub-model containing '\(needle)' missing")
-        }
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = compute
-        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
+        try await ModelLoading.loadSubmodel(modelId: modelId,
+                                             containing: needle,
+                                             compute: compute,
+                                             missingLabel: "sub-model containing")
     }
 
     private static func loadVocab(modelId: String) throws -> [String: Int] {

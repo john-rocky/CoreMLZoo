@@ -151,21 +151,10 @@ public final class VoiceConversionSession: CMZSession {
 
     private static func load(modelId: String, substring: String,
                               compute: MLComputeUnits) async throws -> MLModel {
-        let dir = CMZPaths.modelDir(id: modelId)
-        guard FileManager.default.fileExists(atPath: CMZPaths.metaFile(modelId: modelId).path) else {
-            throw CMZError.modelNotInstalled(id: modelId)
-        }
-        let entries = (try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: nil)) ?? []
-        guard let url = entries.first(where: {
-            ($0.pathExtension == "mlpackage" || $0.pathExtension == "mlmodelc")
-                && $0.lastPathComponent.lowercased().contains(substring)
-        }) else {
-            throw CMZError.inferenceFailed(reason: "OpenVoice sub-model '\(substring)' missing")
-        }
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = compute
-        return try await ModelLoading.loadCompiled(at: url, configuration: cfg)
+        try await ModelLoading.loadSubmodel(modelId: modelId,
+                                             containing: substring,
+                                             compute: compute,
+                                             missingLabel: "OpenVoice sub-model")
     }
 
     private static func readFloats(_ array: MLMultiArray) -> [Float] {
